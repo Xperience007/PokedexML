@@ -10,7 +10,7 @@ class NeuralNet(nn.Module):
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=18, kernel_size=5)
         self.pool = nn.MaxPool2d(kernel_size=(2,2))
         self.conv2 = nn.Conv2d(in_channels=18, out_channels=108, kernel_size=5)
-        self.fc1 = nn.Linear(in_features=(108 * 5 * 5), out_features=540)
+        self.fc1 = nn.Linear(in_features=(108 * 115 * 115), out_features=540)
         self.fc2 = nn.Linear(in_features=540, out_features=378)
         self.fc3 = nn.Linear(in_features=378, out_features=151)
 

@@ -39,23 +39,30 @@ epochs = 30
 
 #Device
 device = torch.device("cuda")
+print(torch.cuda.is_available())
+net = net.to(device)
 
+net = net.train()
 for epoch in range(epochs):
     avg_loss = 0
 
     for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
-        inputs, labels = batch
+        try:
+            inputs = batch[0].to(device) 
+            labels = batch[1].to(device)
 
-        optimizer.zero_grad()
+            optimizer.zero_grad()
 
-        outputs = net(inputs)
+            outputs = net(inputs)
 
-        loss = nn.functional.cross_entropy(outputs, labels)
-        loss.backward()
+            loss = nn.functional.cross_entropy(outputs, labels)
+            loss.backward()
 
-        avg_loss += loss.item()
+            avg_loss += loss.item()
 
-        optimizer.step()
+            optimizer.step()
+        except Exception as e:
+            pass
     
     print(f'Loss: {avg_loss / len(train_dataloader)}')
     print(f"Epoch: {epoch+1}")

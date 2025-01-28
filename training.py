@@ -6,7 +6,15 @@ from torch.utils.data import random_split, DataLoader
 from tqdm import tqdm
 import torchvision
 import torchvision.transforms as transforms
+from PIL import Image
 from classifier import NeuralNet
+
+class SafeImageFolder(torchvision.datasets.ImageFolder):
+    def __getitem__(self, index):
+        try:
+            return super().__getitem__(index)
+        except Exception as e:
+            return None
 
 #Transforms to apply to data
 transform = transforms.Compose([
@@ -17,10 +25,11 @@ transform = transforms.Compose([
 
 #Grab the data and split it into testing and training sets
 data_path = "C:\\Users\\tntbi\\Downloads\\data"
-dataset = torchvision.datasets.ImageFolder(root=data_path, transform=transform)
+dataset = SafeImageFolder(root=data_path, transform=transform)
 train_size = int(len(dataset) * 0.8)
 test_size = len(dataset) - train_size
-train_dataset, test_dataset = random_split(dataset=dataset, lengths=[train_size, test_size])
+valid_samples = [sample for sample in dataset if sample is not None]
+train_dataset, test_dataset = random_split(dataset=valid_samples, lengths=[train_size, test_size])
 
 #Create data loaders
 train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
@@ -33,7 +42,9 @@ print(image.shape)
 net = NeuralNet()
 loss_function = nn.CrossEntropyLoss()
 learning_rate = 1e-4
-optimizer = optim.Adam(params=net.parameters(), lr=learning_rate, weight_decay=0.05)
+optimizer = optim.SGD(params=net.parameters(), lr=learning_rate, weight_decay=1e-2)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=1, threshold=0.01, mode="min", factor=0.5)
+scaler = torch.cuda.amp.GradScaler('cuda')
 
 #Epochs to run for
 epochs = 30
@@ -49,8 +60,6 @@ for epoch in range(epochs):
     inputs = []
     targets = []
     features = []
-    max_grad_norm = 0
-    avg_grad_norm = 0
     avg_correct = 0
 
     for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
@@ -61,8 +70,8 @@ for epoch in range(epochs):
             optimizer.zero_grad()
 
             features = net(inputs)
-            pred = torch.argmax(F.softmax(features), dim=1)
-            truth = torch.argmax(targets, dim=1)
+            pred = torch.argmax(features, dim=1)
+            truth = targets
             correct = (pred == truth).sum().item() / truth.shape[0]
 
             loss = nn.functional.cross_entropy(features, targets)
@@ -71,9 +80,13 @@ for epoch in range(epochs):
             avg_loss += loss.item()
             avg_correct += correct
 
+            nn.utils.clip_grad_norm_(net.parameters(), max_norm=0.1)
+
             optimizer.step()
-        except Exception as e:
+        except OSError as e:
             pass
+    
+    scheduler.step(avg_loss / len(train_dataloader))
     
     print(f'Loss: {avg_loss / len(train_dataloader)}')
     print(f"Avg Train Correct: {avg_correct / len(train_dataloader)}")

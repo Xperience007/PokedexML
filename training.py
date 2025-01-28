@@ -32,7 +32,8 @@ print(image.shape)
 #Set up optimizer, loss, and neural network
 net = NeuralNet()
 loss_function = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+learning_rate = 1e-4
+optimizer = optim.Adam(params=net.parameters(), lr=learning_rate, weight_decay=0.05)
 
 #Epochs to run for
 epochs = 30
@@ -45,26 +46,37 @@ net = net.to(device)
 net = net.train()
 for epoch in range(epochs):
     avg_loss = 0
+    inputs = []
+    targets = []
+    features = []
+    max_grad_norm = 0
+    avg_grad_norm = 0
+    avg_correct = 0
 
     for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
         try:
             inputs = batch[0].to(device) 
-            labels = batch[1].to(device)
+            targets = batch[1].to(device)
 
             optimizer.zero_grad()
 
-            outputs = net(inputs)
+            features = net(inputs)
+            pred = torch.argmax(F.softmax(features), dim=1)
+            truth = torch.argmax(targets, dim=1)
+            correct = (pred == truth).sum().item() / truth.shape[0]
 
-            loss = nn.functional.cross_entropy(outputs, labels)
+            loss = nn.functional.cross_entropy(features, targets)
             loss.backward()
 
             avg_loss += loss.item()
+            avg_correct += correct
 
             optimizer.step()
         except Exception as e:
             pass
     
     print(f'Loss: {avg_loss / len(train_dataloader)}')
+    print(f"Avg Train Correct: {avg_correct / len(train_dataloader)}")
     print(f"Epoch: {epoch+1}")
 
     torch.save(net.state_dict(), f"./classification/epoch_{epoch+1}.pth")

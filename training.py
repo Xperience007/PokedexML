@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import random_split, DataLoader
 from tqdm import tqdm
@@ -9,61 +8,61 @@ import torchvision.transforms as transforms
 from PIL import Image
 from classifier import NeuralNet
 
-class SafeImageFolder(torchvision.datasets.ImageFolder):
-    def __getitem__(self, index):
-        try:
-            return super().__getitem__(index)
-        except Exception as e:
-            return None
+class HandleTransparency:
+    def __call__(self, img):
+        if img.mode == 'P':
+            img = img.convert('RGBA')
+        return img
+    
+class RemoveAlphaChannel:
+    def __call__(self, img):
+        return img.convert('RGB')
 
-#Transforms to apply to data
-transform = transforms.Compose([
-    transforms.Resize((475, 475)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-])
+def train():
+    torch.backends.cudnn.benchmark = True
 
-#Grab the data and split it into testing and training sets
-data_path = "C:\\Users\\tntbi\\Downloads\\data"
-dataset = SafeImageFolder(root=data_path, transform=transform)
-train_size = int(len(dataset) * 0.8)
-test_size = len(dataset) - train_size
-valid_samples = [sample for sample in dataset if sample is not None]
-train_dataset, test_dataset = random_split(dataset=valid_samples, lengths=[train_size, test_size])
+    #Transforms to apply to data
+    transform = transforms.Compose([
+        HandleTransparency(),
+        RemoveAlphaChannel(),
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+    ])
 
-#Create data loaders
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True)
+    #Grab the data and split it into testing and training sets
+    data_path = "C:\\Users\\tntbi\\Downloads\\data"
+    dataset = torchvision.datasets.ImageFolder(root=data_path, transform=transform)
+    train_size = int(len(dataset) * 0.8)
+    test_size = len(dataset) - train_size
+    train_dataset, test_dataset = random_split(dataset=dataset, lengths=[train_size, test_size])
 
-image, label = dataset[0]
-print(image.shape)
+    #Create data loaders
+    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
 
-#Set up optimizer, loss, and neural network
-net = NeuralNet()
-loss_function = nn.CrossEntropyLoss()
-learning_rate = 1e-4
-optimizer = optim.SGD(params=net.parameters(), lr=learning_rate, weight_decay=1e-2)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=1, threshold=0.01, mode="min", factor=0.5)
-scaler = torch.cuda.amp.GradScaler('cuda')
+    #Set up optimizer, loss, and neural network
+    net = NeuralNet()
+    learning_rate = 1e-4
+    optimizer = optim.AdamW(params=net.parameters(), lr=learning_rate, weight_decay=1e-5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=1, threshold=0.01, mode="min", factor=0.5)
 
-#Epochs to run for
-epochs = 30
+    #Epochs to run for
+    epochs = 30
 
-#Device
-device = torch.device("cuda")
-print(torch.cuda.is_available())
-net = net.to(device)
+    #Device
+    device = torch.device("cuda")
+    net = net.to(device)
 
-net = net.train()
-for epoch in range(epochs):
-    avg_loss = 0
-    inputs = []
-    targets = []
-    features = []
-    avg_correct = 0
+    net = net.train()
+    for epoch in range(epochs):
+        avg_loss = 0
+        inputs = []
+        targets = []
+        features = []
+        avg_correct = 0
 
-    for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
-        try:
+        for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
             inputs = batch[0].to(device) 
             targets = batch[1].to(device)
 
@@ -83,13 +82,14 @@ for epoch in range(epochs):
             nn.utils.clip_grad_norm_(net.parameters(), max_norm=0.1)
 
             optimizer.step()
-        except OSError as e:
-            pass
-    
-    scheduler.step(avg_loss / len(train_dataloader))
-    
-    print(f'Loss: {avg_loss / len(train_dataloader)}')
-    print(f"Avg Train Correct: {avg_correct / len(train_dataloader)}")
-    print(f"Epoch: {epoch+1}")
+        
+        scheduler.step(avg_loss / len(train_dataloader))
+        
+        print(f'Loss: {avg_loss / len(train_dataloader)}')
+        print(f"Avg Train Correct: {avg_correct / len(train_dataloader)}")
+        print(f"Epoch: {epoch+1}")
 
-    torch.save(net.state_dict(), f"./classification/epoch_{epoch+1}.pth")
+        torch.save(net.state_dict(), f"./classification/epoch_{epoch+1}.pth")
+
+if __name__ == "__main__":
+    train()

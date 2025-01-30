@@ -7,24 +7,15 @@ import torchvision
 import torchvision.transforms as transforms
 from PIL import Image
 from classifier import NeuralNet
+import warnings
 
-class HandleTransparency:
-    def __call__(self, img):
-        if img.mode == 'P':
-            img = img.convert('RGBA')
-        return img
-    
-class RemoveAlphaChannel:
-    def __call__(self, img):
-        return img.convert('RGB')
+warnings.simplefilter("ignore", UserWarning)
 
 def train():
     torch.backends.cudnn.benchmark = True
 
     #Transforms to apply to data
     transform = transforms.Compose([
-        HandleTransparency(),
-        RemoveAlphaChannel(),
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])

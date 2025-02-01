@@ -10,7 +10,7 @@ from classifier import NeuralNet
 from training import Startup
 
 def load_image(image_path):
-    image = Image.open(image_path)
+    image = Image.open(image_path).convert("RGB")
     image = Startup.transform(image)
     image = image.unsqueeze(0)
     return image

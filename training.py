@@ -5,7 +5,6 @@ from torch.utils.data import random_split, DataLoader
 from tqdm import tqdm
 import torchvision
 import torchvision.transforms as transforms
-from PIL import Image
 from classifier import NeuralNet
 import warnings
 

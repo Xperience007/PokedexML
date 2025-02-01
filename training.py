@@ -11,9 +11,7 @@ import warnings
 
 warnings.simplefilter("ignore", UserWarning)
 
-def train():
-    torch.backends.cudnn.benchmark = True
-
+class Startup():
     #Transforms to apply to data
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -24,13 +22,16 @@ def train():
     #Grab the data and split it into testing and training sets
     data_path = "C:\\Users\\tntbi\\Downloads\\data"
     dataset = torchvision.datasets.ImageFolder(root=data_path, transform=transform)
+    class_names = dataset.classes
     train_size = int(len(dataset) * 0.8)
     test_size = len(dataset) - train_size
     train_dataset, test_dataset = random_split(dataset=dataset, lengths=[train_size, test_size])
 
-    #Create data loaders
-    train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+def train():
+    torch.backends.cudnn.benchmark = True
+
+    #Create data loader
+    train_dataloader = DataLoader(Startup.train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
 
     #Set up optimizer, loss, and neural network
     net = NeuralNet()

@@ -26,7 +26,7 @@ def test():
     net = net.to(device)
     net = net.eval()
 
-    image_paths = ["C:\\Users\\tntbi\\Downloads\\shiny.jpg"]
+    image_paths = ["C:\\Users\\tntbi\\Downloads\\image.png"]
     images = [load_image(img) for img in image_paths]
     class_names = Startup.class_names
 

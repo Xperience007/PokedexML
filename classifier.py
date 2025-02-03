@@ -7,10 +7,10 @@ class NeuralNet(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5, stride=2)
         self.pool = nn.MaxPool2d(kernel_size=(2,2))
-        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5)
-        self.fc1 = nn.Linear(in_features=(128 * 53 * 53), out_features=512)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=2)
+        self.fc1 = nn.Linear(in_features=(128 * 13 * 13), out_features=512)
         self.fc2 = nn.Linear(in_features=512, out_features=256)
         self.fc3 = nn.Linear(in_features=256, out_features=151)
 

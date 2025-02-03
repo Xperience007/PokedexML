@@ -35,7 +35,7 @@ def train():
     #Set up optimizer, loss, and neural network
     net = NeuralNet()
     learning_rate = 1e-4
-    optimizer = optim.AdamW(params=net.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = optim.AdamW(params=net.parameters(), lr=learning_rate, weight_decay=0.05)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=1, cooldown=1, threshold=0.01, mode="min", factor=0.5)
 
     #Epochs to run for
@@ -64,7 +64,7 @@ def train():
             truth = targets
             correct = (pred == truth).sum().item() / truth.shape[0]
 
-            loss = nn.functional.cross_entropy(features, targets)
+            loss = nn.functional.cross_entropy(features, targets, label_smoothing=0.1)
             loss.backward()
 
             avg_loss += loss.item()

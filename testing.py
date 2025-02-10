@@ -30,17 +30,31 @@ def test():
     images = [load_image(img) for img in image_paths]
     class_names = Startup.class_names
 
-    with torch.no_grad():
-        # for batch_idx, batch in enumerate(tqdm(test_dataloader, desc="Testing Batches")):
-        #     inputs = batch[0].to(device)
-        #     targets = batch[1].to(device)
+    avg_correct = 0
 
-        #     features = net(inputs)
-        for image in images:
-            image = image.to(device)
-            features = net(image)
-            _, predicted = torch.max(features, 1)
-            print(f'Prediction: {class_names[predicted.item()]}')
+    with torch.no_grad():
+        # For testing batches
+        for batch_idx, batch in enumerate(tqdm(test_dataloader, desc="Testing Batches")):
+            #Moving data to device
+            inputs = batch[0].to(device)
+            targets = batch[1].to(device)
+
+            #Pass inputs into the model and calculate loss
+            features = net(inputs)
+            pred = torch.argmax(features, dim=1)
+            correct = (pred == targets).sum().item() / targets.shape[0]
+
+            avg_correct += correct
+
+        test_correct = avg_correct/len(test_dataloader)
+        print(f"Avg Test Correct: {test_correct}")
+
+        # For testing one picture
+        # for image in images:
+        #     image = image.to(device)
+        #     features = net(image)
+        #     _, predicted = torch.max(features, 1)
+        #     print(f'Prediction: {class_names[predicted.item()]}')
 
 
 if __name__ == "__main__":

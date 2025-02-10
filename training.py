@@ -54,24 +54,29 @@ def train():
         avg_correct = 0
 
         for batch_idx, batch in enumerate(tqdm(train_dataloader, desc="Training Batches")):
+            #Moving data to device
             inputs = batch[0].to(device) 
             targets = batch[1].to(device)
 
             optimizer.zero_grad()
 
+            #Pass inputs into the model and calculate loss
             features = net(inputs)
             pred = torch.argmax(features, dim=1)
             truth = targets
             correct = (pred == truth).sum().item() / truth.shape[0]
 
+            #Backpropigation
             loss = nn.functional.cross_entropy(features, targets, label_smoothing=0.1)
             loss.backward()
 
             avg_loss += loss.item()
             avg_correct += correct
 
+            #Clipping gradients
             nn.utils.clip_grad_norm_(net.parameters(), max_norm=0.1)
 
+            #Optimizer step
             optimizer.step()
         
         scheduler.step(avg_loss / len(train_dataloader))
